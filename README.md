@@ -102,6 +102,20 @@ TODO
 * Use STM32 in place of Atmega, to gain even lower latency: Planned and depends on previous step.
 * Add SysEx.
 
+See also
+========
+`ttymidi`. It is one-direction bridge, Serial -> ALSA MIDI.
+It will work with our bridge, when it at **Mode 38400**, like
+
+    ttymidi -s /dev/ttyS0 -b 38400
+
+Sadly, `alsa-midi-latency-test -l` not show its port 129, but `aconnect -i` exposes it, and
+
+    alsa-midi-latency-test -i 129:0 -o 16:0 -Rx2
+
+will work.
+
+
 Thanks to
 =========
 
