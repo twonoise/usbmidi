@@ -30,10 +30,12 @@ Toolchain
 
 Compile
 -------
+1. Randomize `SERIALNUMBER` value at C code.
+2. 
 
     avr-gcc -O2 -mmcu=atmega32u4 usbmidi.c && avr-objcopy -O binary a.out a.bin
 
-Binary size expected like ~2,9 kb with `-O2`.
+3. Binary size expected like ~2,9 kb with `-O2`.
 
 Load
 ----
