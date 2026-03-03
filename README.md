@@ -16,8 +16,8 @@ USAGE
 Connections
 -----------
 * Add a button or Reed switch to `RST` and `GND` pins.
-* _Optional_: Add 3-pin header to `D9`, `D10`, `D11` pins.
-* _Optional_: Add MIDI duplex current loop transceiver (typical board with optocoupler and two DIN sockets) to `GND`, `5V`, `RX`, `TX` pins.
+* _Optional_: Add 3-pin male header to `D9`, `D10`, `D11` pins, for mode jumper.
+* _Optional_: Add MIDI duplex current loop transceiver (typical board with optocoupler and two DIN sockets) to `GND`, `5V`, `RX`, `TX` pins. 
 
 Toolchain
 ---------
