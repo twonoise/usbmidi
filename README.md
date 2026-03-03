@@ -1,5 +1,5 @@
 # usbmidi
-AtMega MIDI 1.0 Bridge/Echo, with Atmega, GCC, Linux, ALSA, and JACK
+AtMega MIDI 1.0 Bridge/Echo, with GCC, Linux, ALSA, and JACK
 
 The goals of this research
 ==========================
