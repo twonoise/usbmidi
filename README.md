@@ -48,7 +48,7 @@ Modes
 -----
 
 For bare board, with only Reset switch added, there is only **Hardware Echo** (loopback) mode, you will see _one_ bright blink after inserting board into USB.
-If 3-pin header installed, you select two more modes: **regular MIDI** at 31250 bps when `D10` to `D11` are shorted using jumper (before power on). There will be _two_ blinks. And `D9` to `D10` jumper is same but **38400 bps**, which allows to send and receive at serial terminal; there will be _three_ blinks.
+If 3-pin header installed, you select two more modes: **regular MIDI bridge** at 31250 bps when `D10` to `D11` are shorted using jumper (before power on). There will be _two_ blinks. And `D9` to `D10` jumper is same but **38400 bps**, which allows to send and receive at serial terminal; there will be _three_ blinks.
 
 
 Results
