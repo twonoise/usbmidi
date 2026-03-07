@@ -40,7 +40,7 @@ Compile
 Load
 ----
 
-CJMCU Beetle comes with bootloader. To enter it, plug in the module, activate RST button or Reed switch you just soldered in, then within a few seconds:
+CJMCU Beetle comes with [bootloader](https://github.com/adafruit/Caterina-Bootloader). To enter it, plug in the module, activate RST button or Reed switch you just soldered in, then within a few seconds:
 
     avrdude -patmega32u4 -cavr109 -P/dev/ttyACM0 -b57600 -D -U flash:w:a.bin:r
 
