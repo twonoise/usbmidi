@@ -58,6 +58,8 @@ To fall back to regular MIDI 1.0, unplug board and:
 
 Note that with Midi 2.0, only Echo mode is fully operational. Midi 2.0 messages should not be passed through cable. While code support it and technically will work, there is nonsense to use it as other than informational tests, cable loopback (note increase RTT for 8 bytes, compared to three, @ 31250 bps) or feed to/from serial terminal. Or, MIDI 2.0<->1.0 translation need. But i do not want to reinvent the bike, because your Linux PC already have this translation inside, and it is used after switch to MIDI 1.0 using command above.
 
+As a side note, one may note that, using Midi 2.0, there is no way to: tell the OS/driver that we prefer MIDI 1.0; or, to have both MIDI 1.0 and 2.0 at same time (like each at its own endpoint), sadly. At least, Midi.org is not defines these conditions.
+
 Modes
 -----
 
