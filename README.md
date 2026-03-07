@@ -6,6 +6,7 @@ The goals of this research
 
 * Determine if regular USB-serial code can be used as MIDI bridge, using MIDI USB descriptors: **Done.**
 * Conduct all required tests, to determine if this solution is adequate and fast enough to be reference code for MIDI 2.0/1.0 latency (RTT) measurements, as well as for regular MIDI 1.0 bridge: **You decide if it is done.**
+* To just see MIDI 2.0 device in your Linux box, for a tiny bit of money and time. **Done.**
 
 
 Target platform is **CJMCU Beetle** 16 MHz with hardware USB Full speed. But note that its resonator is ceramic, use with caution. To be useful as real 24h stage use MIDI bridge, we need to use quartz crystal in place of ceramic one, and, have exactly zero length USB cable (incl. enclosure internal USB cables). But even in this case nothing can be guaranteed, because of sensitive and stateful nature of USB bus itself.
@@ -46,7 +47,7 @@ CJMCU Beetle comes with [bootloader](https://github.com/adafruit/Caterina-Bootlo
 
 Midi 2.0-1.0 switch
 ----------------------
-As per [midi.org](https://midi.org/building-a-usb-midi-2-0-device-part-3) [3], here we have two Alternate Settings for MIDI 1.0 and 2.0. Unlike some other projects and musical instruments, there is no hardware switch. Linux kernel and Sound driver is responsible to select best mode via USB altset, and today it is MIDI 2.0. 
+As per [midi.org](https://midi.org/building-a-usb-midi-2-0-device-part-3) [4], here we have two Alternate Settings for MIDI 1.0 and 2.0. Unlike some other projects and musical instruments, there is no hardware switch. Linux kernel and Sound driver is responsible to select best mode via USB altset, and today it is MIDI 2.0. 
 
 To fall back to regular MIDI 1.0, unplug board and:
 
@@ -55,12 +56,13 @@ To fall back to regular MIDI 1.0, unplug board and:
     rmmod -f snd-usb-audio  # Use Force with caution.
     modprobe snd-usb-audio midi2_enable=0
 
-Note that with Midi 2.0, only Echo mode is fully operational. Midi 2.0 messages should not be passed through cable. While code support it and technically will work, there is nonsense to use it as other than informational tests, cable loopback (note increase RTT for 8 bytes, compared to 3, @ 31250 bps) or feed to/from serial terminal. Or, MIDI 2.0<->1.0 translation need. But i do not want to reinvent the bike, because your Linux PC already have this translation inside, and it is used after switch to MIDI 1.0 using command above.
+Note that with Midi 2.0, only Echo mode is fully operational. Midi 2.0 messages should not be passed through cable. While code support it and technically will work, there is nonsense to use it as other than informational tests, cable loopback (note increase RTT for 8 bytes, compared to three, @ 31250 bps) or feed to/from serial terminal. Or, MIDI 2.0<->1.0 translation need. But i do not want to reinvent the bike, because your Linux PC already have this translation inside, and it is used after switch to MIDI 1.0 using command above.
 
 Modes
 -----
 
 For bare board, with only Reset switch added, there is only **Hardware Echo** (loopback) mode, you will see _one_ bright blink after inserting board into USB.
+
 If 3-pin header installed, you select two more modes: **regular MIDI bridge** at 31250 bps when `D10` to `D11` are shorted using jumper (before power on). There will be _two_ blinks. And `D9` to `D10` jumper is same but **38400 bps**, which allows to send and receive at serial terminal; there will be _three_ blinks.
 
 
@@ -111,7 +113,7 @@ There is no any gain using `linux-rt` i measure so far. Furthermore, JACK team a
 TODO
 ====
 
-* Make it all in Assembler: WIP, with pre-requisites are ready (one complete C file, not depends on libraries, ~3 kb firmware).
+* Make it all in Assembler: WIP, with pre-requisites are ready (one complete C file, not depends on libraries, ~3 kb firmware, and, there are working USB-Serials for Atmega in Assembler, that's why it is important to base this code on USB-Serial, not on "real" USB-Midi).
 * Use STM32 in place of Atmega, to gain even lower latency: Planned and depends on previous step.
 * Add SysEx.
 
