@@ -1,11 +1,11 @@
 # usbmidi
-AtMega MIDI 1.0 Bridge/Echo, with GCC, Linux, ALSA, and JACK
+AtMega MIDI Bridge/Echo, with GCC, Linux, ALSA, and JACK
 
 The goals of this research
 ==========================
 
 * Determine if regular USB-serial code can be used as MIDI bridge, using MIDI USB descriptors: **Done.**
-* Conduct all required tests, to determine if this solution is adequate and fast enough to be reference code for latency (RTT) measurements, as well as for regular MIDI 1.0 bridge: **You decide if it is done.**
+* Conduct all required tests, to determine if this solution is adequate and fast enough to be reference code for MIDI 2.0/1.0 latency (RTT) measurements, as well as for regular MIDI 1.0 bridge: **You decide if it is done.**
 
 
 Target platform is **CJMCU Beetle** 16 MHz with hardware USB Full speed. But note that its resonator is ceramic, use with caution. To be useful as real 24h stage use MIDI bridge, we need to use quartz crystal in place of ceramic one, and, have exactly zero length USB cable (incl. enclosure internal USB cables). But even in this case nothing can be guaranteed, because of sensitive and stateful nature of USB bus itself.
@@ -35,7 +35,7 @@ Compile
 
     avr-gcc -O2 -mmcu=atmega32u4 usbmidi.c && avr-objcopy -O binary a.out a.bin
 
-3. Binary size expected like ~2,9 kb with `-O2`.
+3. Binary size expected like ~3,3 kb with `-O2`.
 
 Load
 ----
@@ -43,6 +43,19 @@ Load
 CJMCU Beetle comes with [bootloader](https://github.com/adafruit/Caterina-Bootloader). To enter it, plug in the module, activate RST button or Reed switch you just soldered in, then within a few seconds:
 
     avrdude -patmega32u4 -cavr109 -P/dev/ttyACM0 -b57600 -D -U flash:w:a.bin:r
+
+Midi 2.0-1.0 switch
+----------------------
+As per [midi.org](https://midi.org/building-a-usb-midi-2-0-device-part-3) [3], here we have two Alternate Settings for MIDI 1.0 and 2.0. Unlike some other projects and musical instruments, there is no hardware switch. Linux kernel and Sound driver is responsible to select best mode via USB altset, and today it is MIDI 2.0. 
+
+To fall back to regular MIDI 1.0, unplug board and:
+
+    rmmod snd-usb-audio
+    or 
+    rmmod -f snd-usb-audio  # Use Force with caution.
+    modprobe snd-usb-audio midi2_enable=0
+
+Note that with Midi 2.0, only Echo mode is fully operational. Midi 2.0 messages should not be passed through cable. While code support it and technically will work, there is nonsense to use it as other than informational tests, cable loopback (note increase RTT for 8 bytes, compared to 3, @ 31250 bps) or feed to/from serial terminal. Or, MIDI 2.0<->1.0 translation need. But i do not want to reinvent the bike, because your Linux PC already have this translation inside, and it is used after switch to MIDI 1.0 using command above.
 
 Modes
 -----
@@ -138,5 +151,5 @@ References
 
 [3] https://midi.org/summary-of-midi-1-0-messages
 
-
+[4] https://midi.org/building-a-usb-midi-2-0-device-part-3
 
