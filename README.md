@@ -49,7 +49,10 @@ Midi 2.0-1.0 switch
 ----------------------
 As per [midi.org](https://midi.org/building-a-usb-midi-2-0-device-part-3) [4], here we have two Alternate Settings for MIDI 1.0 and 2.0. Unlike some other projects and musical instruments, there is no hardware switch. Linux kernel and Sound driver are responsible to select best mode via USB altset, and today it is MIDI 2.0. 
 
-To fall back to regular MIDI 1.0, unplug board and:
+To fall back to regular MIDI 1.0:
+* stop JACK Server;
+* unplug board;
+* and:
 
     rmmod snd-usb-audio
     or 
