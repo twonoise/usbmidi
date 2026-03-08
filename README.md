@@ -47,7 +47,7 @@ CJMCU Beetle comes with [bootloader](https://github.com/adafruit/Caterina-Bootlo
 
 Midi 2.0-1.0 switch
 ----------------------
-As per [midi.org](https://midi.org/building-a-usb-midi-2-0-device-part-3) [4], here we have two Alternate Settings for MIDI 1.0 and 2.0. Unlike some other projects and musical instruments, there is no hardware switch. Linux kernel and Sound driver is responsible to select best mode via USB altset, and today it is MIDI 2.0. 
+As per [midi.org](https://midi.org/building-a-usb-midi-2-0-device-part-3) [4], here we have two Alternate Settings for MIDI 1.0 and 2.0. Unlike some other projects and musical instruments, there is no hardware switch. Linux kernel and Sound driver are responsible to select best mode via USB altset, and today it is MIDI 2.0. 
 
 To fall back to regular MIDI 1.0, unplug board and:
 
@@ -56,7 +56,7 @@ To fall back to regular MIDI 1.0, unplug board and:
     rmmod -f snd-usb-audio  # Use Force with caution.
     modprobe snd-usb-audio midi2_enable=0
 
-Note that with Midi 2.0, only Echo mode is fully operational. Midi 2.0 messages should not be passed through cable. While code support it and technically will work, there is nonsense to use it as other than informational tests, cable loopback (note increase RTT for 8 bytes, compared to three, @ 31250 bps) or feed to/from serial terminal. Or, MIDI 2.0<->1.0 translation need. But i do not want to reinvent the bike, because your Linux PC already have this translation inside, and it is used after switch to MIDI 1.0 using command above.
+Note that with Midi 2.0, only Echo mode is fully operational. Midi 2.0 messages should not be passed through cable. While code supports it and technically will work, there is nonsense to use it as other than informational tests, cable loopback (note increase RTT for 8 bytes, compared to three, @ 31250 bps) or feed to/from serial terminal. Or, MIDI 2.0<->1.0 translation need. But i do not want to reinvent the bike, because your Linux PC already have this translation inside, and it is used after switch to MIDI 1.0 using command above.
 
 As a side note, one may note that, using Midi 2.0, there is no way to: tell the OS/driver that we prefer MIDI 1.0; or, to have both MIDI 1.0 and 2.0 at same time (like each at its own endpoint), sadly. At least, Midi.org is not defines these conditions.
 
