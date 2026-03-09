@@ -95,11 +95,14 @@ And results are: median is **0.11 ms** with Echo, and **1.20 ms** with cable.
 
 Note that cable transmission can't go below 3*10/31250=0.96 ms (for 3-byte message); here we see it's 1.09 ms. The difference is because we need to complex parse both incoming and outgoing traffic, due to USB MIDI 1.0 specs [1] are add extra headers (i.e. USB-MIDI is not possible as just USB-Serial directly). Using STM32 @ 72 MHz, i hope this extra 0.13 ms can be reduced.
 
-Worst case i see is 3.7 ms with via cable, and 2.98 ms with Echo.
+Worst case i see is **3.7 ms** with via cable, and **2.98 ms** with Echo.
 
 Using very poweful desktop, compared to this ancient CPU tests, gives almost no gain, during these _bare ALSA_ tests. There *is* difference with real life JACK setup tests. But these are in progress now.
 
-For _MIDI 2.0_, i see median RTT is **0.09 ms** with Echo, which is 20 us better than _MIDI 1.0_, this was unexpected. This can mean that no compatibility translation occurs in kernel or driver in this case, so we have not worse, but better RTT, with larger wire payload.
+For _MIDI 2.0_, i measure _median_ RTT is **0.09 ms** with Echo, which is 20 us better than _MIDI 1.0_, this was unexpected. This can mean that no compatibility translation occurs in kernel or driver in this case, so we have not worse, but better RTT, with larger wire payload.
+
+What is even more unexpected, for _MIDI 2.0_ i see _worst case_ RTT like an **order** of improvement, it is **0.31 ms** with Echo. This can means that translation occurs somewhere in user space. So, _MIDI 2.0_ not only cut delay a bit, but also greatly reduces jitter. However, it can be less different on powerful CPU.
+
 
 ### 3. JACK tests
 
