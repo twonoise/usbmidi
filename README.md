@@ -106,8 +106,9 @@ TODO.
 Known Bugs
 ==========
 
-* At incomplete MIDI packet or wrong MIDI data (at MIDI IN), Activity LED remains to lit, until correct data. At other side, it is not only bug, but also feature, because it helps to detect some weird conditions like cable noise.
-* There is no SysEx yet, this is planned.
+* At incomplete MIDI packet or wrong MIDI data (at MIDI IN), Activity LED remains to lit, until correct data. At other side, it is not only bug, but more like a feature, because it helps to detect some weird conditions like cable noise.
+Example is low byte like `0x55` not preambled with high (status) byte like `0x90`. Other example is unfinished `0xf0, 0x55, 0x55` sysex.
+  
 
 RT Kernels
 ==========
@@ -119,7 +120,6 @@ TODO
 
 * Make it all in Assembler: WIP, with pre-requisites are ready (one complete C file, not depends on libraries, ~3 kb firmware, and, there are working USB-Serials for Atmega in Assembler, that's why it is important to base this code on USB-Serial, not on "real" USB-Midi).
 * Use STM32 in place of Atmega, to gain even lower latency: Planned and depends on previous step.
-* Add SysEx.
 
 See also
 ========
