@@ -24,7 +24,7 @@ Toolchain
 ---------
 
     # For Archlinux:
-    pacman -S avr-gcc avr-libc
+    pacman -S avr-gcc avr-libc avrdude
     # Should print:
     # This assembler was configured for a target of `avr'.
     $(avr-gcc -print-prog-name=as) --version
