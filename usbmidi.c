@@ -156,38 +156,10 @@ uint8_t uwptr, irptr;
 // For MIDI1/2->USB. FIXME Will it work for large SysEx's?
 uint8_t buf[8];
 
-uint8_t stateTransTable[16+8] = {
-    0,          // 0 dummy
-    0,          // 1 dummy
-    3,          // 2->3 Note OFF (3)
-    2 | 0x80,   // 3->2
-    5,          // 4->5 Note ON (3)
-    4 | 0x80,   // 5->4
-    7,          // 6->7 Polyphonic key pressure (3)
-    6 | 0x80,   // 7->6
-    9,          // 8->9 Control Change (3)
-    8 | 0x80,   // 9->8
-    10 | 0x80,  // 10->10 program change (2)
-    0,          // 11 dummy
-    12 | 0x80,  // 12->12 Channel Pressure (2)
-    0,          // 13 dummy
-    15,         // 14->15 Pitch Bend (3)
-    14 | 0x80,  // 15->14
-    0,          // 0xF0 dummy
-    0,          // 0xF0 dummy
-    18 | 0x80,  // 0xF1 2-byte
-    0,          // 0xF1 2-byte
-    21,         // 0xF2 3-byte
-    20 | 0x80,  // 0xF2 3-byte
-    22 | 0x80,  // 0xF3 2-byte
-    0,          // 0xF3 2-byte
-};
-
-uint8_t PC;
-uint8_t SysEx;
 uint8_t usb_isconfigured;
 uint8_t transmit_previous_timeout;
 uint8_t altset;
+uint8_t p, q;
 
 // number of bytes available in the receive buffer
 unsigned char usb_rx_available(void)
@@ -451,7 +423,7 @@ ISR(USB_COM_vect)
     const uint8_t *list;
     const uint8_t *cfg;
     uint8_t i, n, len, en;
-    uint8_t *p;
+    // uint8_t *p;
     uint8_t bmRequestType;
     uint8_t bRequest;
     uint16_t wValue;
@@ -526,7 +498,9 @@ ISR(USB_COM_vect)
         if (bRequest == 11) { // REQ_SET_INTERFACE
             usb_send_in();
             altset = wValue & (uint16_t)1;
-            PC = 0;
+            // PC = 0;
+            p = 6;
+            q = 0;
             return;
         }
         if (bRequest == 9 && bmRequestType == 0) { // SET_CONFIGURATION
@@ -607,9 +581,11 @@ int main(void)
     transmit_previous_timeout = 0;
     uwptr = 0;
     irptr = 0;
-    PC = 0;
-    SysEx = 0;
+    // PC = 0;
+    // SysEx = 0;
     altset = 0;
+    p = 6;
+    q = 0;
 
     uint16_t n = 0;
 
@@ -706,10 +682,10 @@ skip:
             if(UCSR1A & (1<<RXC1)) {
                 // TODO add timeout for LED off, if MIDI RX terminated in middle.
                 sbi(PORTC, 7);
-                buf[PC++] = UDR1;
-                if (PC == 8)
+                buf[q++] = UDR1;
+                if (q == 8)
                 {
-                    PC = 0;
+                    q = 0;
                     usb_tx_buffer (buf, 8);
                     usb_tx_push();
                     cbi(PORTC, 7);
@@ -761,13 +737,23 @@ skip:
                 // it is impossible without timeout, because serial MIDI
                 // receive is async, and gaps between bytes are not known
                 // and will vary. So this complex state machine used.
-                // NOTE: Based on parseSerialMidiMessage(), but expanded a bit.
 
-                // SysEx not work currently, TODO.
-                if(SysEx){                 /* MIDI System Message */
-                    if(RxByte == 0xf7)     /* MIDI_EndSysEx */
-                        SysEx = 0;
-                    goto notyet;
+                if (RxByte == 0xF7) // End of SysEx
+                {
+                    if (q == 4)     // It's currently SysEx
+                    {
+                        q = 0;
+                        n = 0;
+                        buf[0] = p;
+                        if (p == 5)
+                            goto utxrdy2;
+                        else if (p == 6)
+                            goto utxrdy3;
+                        else // 7
+                            goto utxrdy4;
+                    }
+                    q = 0;
+                    goto stop;
                 }
 
                 // 1-byte commands.
@@ -775,60 +761,109 @@ skip:
                 // we pass it correctly (as single-bytes), still they can be
                 // thrown away, depending on kernel USB-MIDI driver, as their
                 // length is also undefined officially.
-                if (RxByte >= 0xF4){ // SysEx End 0xF7 will not work, TODO.
-                    // buf[0] = 0x0f Should not be used, as it is for other purpose.
-                    buf[0] = 0x05;   // 1-byte
+                if (RxByte >= 0xF4)
+                    goto utxrdy1;
+                else if (RxByte > 0x7F) // 0x80..0xF3
+                {
+                    p = 6;
+                    q = 3;
+
+                    // This status lasts until it will be replaced with new one.
+                    // I.e. chord is not 0x90 0x40 0x7f, 0x90 0x41 0x7f...,
+                    // but 0x90 0x40 0x7f 0x41 0x7f... on MIDI cable.
                     buf[1] = RxByte;
-                    buf[2] = 0;
-                    buf[3] = 0;
-                    goto utxrdy;
-                }
 
-                // SysEx not work currently, TODO.
-                if(RxByte > 0x7F){         /* Channel message */
-                    if(RxByte == 0xf0){    /* MIDI_StartSysEx */
-                        SysEx = 1;
-                        goto notyet;
+                    // Payload bytes for this status byte: 1, 2, or 3 for sysex.
+                    // Zero-payload status bytes are handled earlier.
+
+                    if (RxByte < 0xF0) // 0x80..0xEF
+                    {
+                        buf[0] = RxByte >> 4;  // Table 4-1
+                        // 0xCx Program Change, 0xDx Channel Pressure
+                        if ((RxByte & 0b11100000) == 0b11000000)
+                            q--;
                     }
-                    PC = 0;
-                }
-
-                if (PC == 0) {
-                    if(RxByte < 0x80)
-                        goto ignore;
-
-                    PC = (((RxByte >> 4) & 0x07) + 1) * 2;
-                    if (PC > 15) { // Same as RxByte is 0xF0-0xF3 (note we cut >= 0xF4 above)
-                        PC = PC + (RxByte & 0x03) * 2;
-                    }
-
-                    // TODO rewrite for better speed (using table?).
-                    if (RxByte == 0xF2)           // 3-byte
-                        buf[0] = 0x03;            // 3-byte
-                    else if ((RxByte == 0xF1) ||
-                            (RxByte == 0xF3))    // 2-byte
-                        buf[0] = 0x02;            // 2-byte
                     else
-                    // conversion
-                    // 0x80->2, 0x90->4, 0xa0->6, 0xb0->8, 0xc0->10, 0xd0->12, 0xe0->14
-                        buf[0] = RxByte >> 4;
+                    {
+                        // Sysex start. Sysex is 3-byte payload.
+                        if (RxByte == 0xF0)
+                            q++;
+                        // 0xF1 Time Code, 0xF3 Song Select, are 1-byte payload.
+                        else if (RxByte != 0xF2)
+                            q--;
+                        // Here is only 0xF2 passed, it is 2-byte payload.
 
-                    buf[1] = RxByte;
-                    buf[3] = 0;
-                } else {
-                    uint8_t tt = stateTransTable[PC];
-                    buf[(PC & 1) + 2] = RxByte;
-                    PC = tt & 0x1f;
-                    if ((tt & 0x80) != 0)
-                        goto utxrdy;
+                        buf[0] = q;  // Table 4-1: 2, 4, or 3
+                    }
+                }
+                else // if(RxByte < 0x80)
+                {
+                    if (q == 4) // SysEx: 6 -> 7 -> 5 -> 6 -> 7 -> 5 -> 6 -> 7...
+                    {
+                        if (p == 5)
+                        {
+                            buf[1] = RxByte;
+                            p++;
+                        }
+                        else if (p == 6)
+                        {
+                            buf[2] = RxByte;
+                            p++;
+                        }
+                        else // 7
+                        {
+                            buf[3] = RxByte;
+                            p = 5;
+                            usb_tx_buffer (buf, 4);
+                            n++;        // Q'ty of 4-byte chunks
+                            if (n >= 7) // Like similar to Axiom 25 for simpler debug.
+                            {
+                                n = 0;
+                                goto utxrdy5;
+                            }
+                        }
+                    }
+                    else if (q == 3)
+                    {
+                        if (p == 6)
+                        {
+                            buf[2] = RxByte;
+                            p++;
+                        }
+                        else // 7
+                        {
+                            p = 6;
+                            goto utxrdy4;
+                        }
+                    }
+                    else if (q == 2)
+                        goto utxrdy3;
+
+                    // Here q = 0, or no multibyte status byte received so far: LED remains lit.
+                    goto notyet;
                 }
 
                 goto notyet;
-utxrdy:
-                PC = 0;
+
+utxrdy1:
+                q = 0;
+                buf[0] = 0x05;   // 1-byte
+utxrdy2:
+                buf[1] = RxByte;
+                buf[2] = 0;
+                buf[3] = 0;
+                goto utxrdy4a;
+utxrdy3:
+                buf[2] = RxByte;
+                buf[3] = 0;
+                goto utxrdy4a;
+utxrdy4:
+                buf[3] = RxByte;
+utxrdy4a:
                 usb_tx_buffer (buf, 4);
+utxrdy5:
                 usb_tx_push();
-ignore:
+stop:
                 cbi(PORTC, 7);
 notyet:
             }
