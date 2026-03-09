@@ -99,6 +99,8 @@ Worst case i see is 3.7 ms with via cable, and 2.98 ms with Echo.
 
 Using very poweful desktop, compared to this ancient CPU tests, gives almost no gain, during these _bare ALSA_ tests. There *is* difference with real life JACK setup tests. But these are in progress now.
 
+For _MIDI 2.0_, i see median RTT is **0.09 ms** with Echo, which is 20 us better than _MIDI 1.0_, this was unexpected. This can mean that no compatibility translation occurs in kernel or driver in this case, so we have not worse, but better RTT, with larger wire payload.
+
 ### 3. JACK tests
 
 TODO.
