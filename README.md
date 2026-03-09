@@ -164,3 +164,4 @@ References
 
 [4] https://midi.org/building-a-usb-midi-2-0-device-part-3
 
+[5] https://cmtext.com/MIDI/chapter3_channel_voice_messages.php
