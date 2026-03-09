@@ -581,8 +581,6 @@ int main(void)
     transmit_previous_timeout = 0;
     uwptr = 0;
     irptr = 0;
-    // PC = 0;
-    // SysEx = 0;
     altset = 0;
     p = 6;
     q = 0;
