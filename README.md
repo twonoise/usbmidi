@@ -32,10 +32,7 @@ Toolchain
 Compile
 -------
 1. Randomize `SERIALNUMBER` value at C code.
-2. 
-
-    avr-gcc -O2 -mmcu=atmega32u4 usbmidi.c && avr-objcopy -O binary a.out a.bin
-
+2. ```avr-gcc -O2 -mmcu=atmega32u4 usbmidi.c && avr-objcopy -O binary a.out a.bin```
 3. Binary size expected like ~3,3 kb with `-O2`.
 
 Load
@@ -53,12 +50,12 @@ To fall back to regular MIDI 1.0:
 * stop JACK Server;
 * unplug board;
 * and:
-
+```
     rmmod snd-usb-audio
     or 
     rmmod -f snd-usb-audio  # Use Force with caution.
     modprobe snd-usb-audio midi2_enable=0
-
+```    
 When we inited as MIDI 2.0, you will see _one extra small blink_ of Activity LED, along with bright flashes outlined below: it is MIDI 2.0 status packet from driver. And, look at `dmesg`, of course.
 
 Note that with Midi 2.0, only Echo mode is fully operational. Midi 2.0 messages should not be passed through cable. While code supports it and technically will work, there is nonsense to use it as other than informational tests, cable loopback (note increase RTT for 8 bytes, compared to three, @ 31250 bps) or feed to/from serial terminal. Or, MIDI 2.0<->1.0 translation need. But i do not want to reinvent the bike, because your Linux PC already have this translation inside, and it is used after switch to MIDI 1.0 using command above.
@@ -98,7 +95,7 @@ And results are: median is **0.11 ms** with Echo, and **1.20 ms** with cable.
 
 Note that cable transmission can't go below 3*10/31250=0.96 ms (for 3-byte message); here we see it's 1.09 ms. The difference is because we need to complex parse both incoming and outgoing traffic, due to USB MIDI 1.0 specs [1] are add extra headers (i.e. USB-MIDI is not possible as just USB-Serial directly). Using STM32 @ 72 MHz, i hope this extra 0.13 ms can be reduced.
 
-Worst case i see is 3.22 ms with via cable, and 2.98 ms with Echo.
+Worst case i see is 3.7 ms with via cable, and 2.98 ms with Echo.
 
 Using very poweful desktop, compared to this ancient CPU tests, gives almost no gain, during these _bare ALSA_ tests. There *is* difference with real life JACK setup tests. But these are in progress now.
 
