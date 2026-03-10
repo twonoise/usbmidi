@@ -112,13 +112,40 @@ Known Bugs
 ==========
 
 * At incomplete MIDI packet or wrong MIDI data (at MIDI IN), Activity LED remains to lit, until correct data. At other side, it is not only bug, but more like a feature, because it helps to detect some weird conditions like cable noise.
-Example is low byte like `0x55` not preambled with high (status) byte like `0x90`. Other example is unfinished `0xf0, 0x55, 0x55` sysex.
+Example is low byte like `0x55` not preambled with high (status) byte like `0x90`. Other example is unfinished `0xf0, 0x55, 0x55`... sysex.
   
 
 RT Kernels
 ==========
 
 There is no any gain using `linux-rt` i measure so far. Furthermore, JACK team also not recommend it for today's setups. _Btw, RT kernel gives bad effects on network audio, there will be separate research on it._
+
+Current MIDI 2.0 status
+=======================
+It turns out that not so much we can do with pure MIDI 2.0. Most tests will show things are "work", but it is due to kernel/driver transtation from/to MIDI 1.0, so only we can see are 3-byte packets.
+
+Here we can see pure MIDI 2.0:
+
+    hexdump -Cv /dev/snd/umpC0D0
+
+But here are only 1.0 3-byte values, decimated by system:
+
+    amidi -d -p hw:0,1,0
+
+And here i am still can't decide what exactly i receive, as no raw dump:
+
+    aseqdump -u 2 -r -R -p 16:1    
+
+As for JACK and its apps ecosystem, there is no MIDI2 support, and not planned, as for Mar, 2026. There are requests [7] and tools [8] [9] that shows that current JACK is technically works, but can't be used in real setup, as we will see below:
+
+To compile these tools, namely, `jacktestumpsender` and `jackumptestmonitor`:
+
+    cd Sources/
+    g++ -Wall *.cpp -g -O2 -s -ljack `wx-config --cflags` `wx-config --libs`  
+
+Then we see tools itself are works with MIDI 2.0.
+
+But trying to see what we receive from USB, our 8-byte packets are displayed at receiver as 3-byte MIDI 1.0 messages.
 
 TODO
 ====
@@ -165,3 +192,11 @@ References
 [4] https://midi.org/building-a-usb-midi-2-0-device-part-3
 
 [5] https://cmtext.com/MIDI/chapter3_channel_voice_messages.php
+
+[6] https://allthings.how/how-to-enable-midi-2-0-on-linux/
+
+[7] https://github.com/jackaudio/jack2/issues/535
+
+[8] https://github.com/bbouchez/jacktestumpsender
+
+[9] https://github.com/bbouchez/jackumptestmonitor
