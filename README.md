@@ -186,11 +186,14 @@ Thanks to
 2. Objective Development Software GmbH, 2009, for free USB PID. https://github.com/robsoncouto/midikeyboard/tree/master/usbdrv  License: GNU GPL v2 or v3 at your choice.
 3. morecat_lab, 2011, http://morecatlab.akiba.coocan.jp/morecat_lab/MocoLUFA.html, for MIDI 1.0 parsers. License: Creative Commons 2.5 Share/alike
 
-
 License
 =======
 
-GNU GPL v2 or later.
+This research text description, together with its inlined pictures, are licensed under Creative Commons Attribution 4.0. You are welcome to contribute to the research in order to improve it so long as your contributions are made available under this same license.
+
+`usbmidi` is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 References
 ==========
