@@ -6,7 +6,7 @@
 /*
 USB FS to MIDI 1.0 Bridge & MIDI 2.0/1.0 no-cable Echo (loopback), based on fast USB-Serial, for RTT measure and regular use.
 Platform: CJMCU Beetle 16 MHz with h/w USB FS, but note its resonator is ceramic, use with caution.
-Binary:   ~3 kb with -O2.
+Binary:   ~3,9 kb with -O2.
 Speed:    According to usbmon, self delay is below 100 us, typ. 65 us, using JACK2, >15 yrs old CPU, 6.18.9 non-RT kernel, and low DSP load. Both MIDI1 & MIDI2.
 License:  GNU GPL v2 or later.
 
@@ -17,14 +17,16 @@ Thanks to:
 4. https://midi2-dev.github.io/usbMIDI2DescriptorBuilder/ for MIDI 2.0 descriptor. License: Unknown.
 */
 
-#define F_CPU 16000000UL
+#define F_CPU  16000000UL
 
-#define ASCII_MANUFACTURER   L"TwoNoise"
-#define ASCII_PRODUCT        L"MIDI 2.0 Bridge"
-#define ASCII_SERIALNUMBER   L"38198562"  // MUST HAVE as per USB-IDs-for-free.txt
-#define ASCII_NAME           L"MIDIBridge"
-#define VID                  0xc0, 0x16
-#define PID                  0xde, 0x27
+#define ASCII1 L"TwoNoise"
+#define ASCII2 L"USBMIDI BRIDGE"
+#define ASCII3 L"18126755"      // S/N MUST HAVE as per USB-IDs-for-free.txt
+#define ASCII4 L"USBMIDI ECHO"
+#define ASCII5 L"Bridge"
+#define ASCII6 L"Echo"
+#define VID    0xc0, 0x16
+#define PID    0xde, 0x27
 
 #include <stdlib.h>
 #include <string.h>
@@ -41,22 +43,71 @@ Thanks to:
 #define SUPPORT_ENDPOINT_HALT
 
 // Endpoint Buffer Configuration
-#define EP0SZ  8
-#define RXEP   1
-#define TXEP   2
+#define EP0SZ   8
+#define RXEP    1
+#define TXEP    2
+#define ERXEP   3
+#define ETXEP   4
 #define RXSZ   64
 #define TXSZ   64
 
- const uint8_t PROGMEM endpoint_config_table[] = {
+const uint8_t PROGMEM endpoint_config_table[] = {
     1, 0x81, EP_SIZE(TXSZ) | 0x06, // EP_TYPE_BULK_IN, EP_DOUBLE_BUFFER
     1, 0x80, EP_SIZE(RXSZ) | 0x06, // EP_TYPE_BULK_OUT, EP_DOUBLE_BUFFER
+    1, 0x81, EP_SIZE(TXSZ) | 0x06,
+    1, 0x80, EP_SIZE(RXSZ) | 0x06,
 };
 
- const uint8_t PROGMEM device_descriptor[] = {
-    18, 1, 0x10, 0x01, 0xef, 2, 1, EP0SZ, VID, PID, 0, 1, 1, 2, 3, 1,
+const uint8_t PROGMEM device_descriptor[] = {
+    18, 1, 0x10, 0x01, 0xef, 2, 1, EP0SZ, VID, PID, 0, 1, 1, 2, 3, 2,
+    -1
+};
+const uint8_t PROGMEM device_descriptor_qualifier[] = {
+    0x0A, 6, 0, 2, 0xEF, 2, 1, 0x40, 2, 0,
+    -1
 };
 
- const uint8_t PROGMEM config1_descriptor[] = {
+#define config_descriptor_cont                   \
+    8, 0x0B, 0, 2, 1, 3, 0, 0,                   \
+    9, 4, 0, 0, 0, 1, 1, 0, 0,                   \
+    9, 0x24, 1, 0, 1, 9, 0, 1, 1,                \
+                                                 \
+    9, 4, 1, 0, 2, 1, 3, 0, (2),                 \
+    7, 0x24, 1, 0, 1, ((35)), 0,                 \
+/* This is different from builder, it missed these 28 bytes? */ \
+    9, 5, TXEP, 2, 0x40, 0, 0, 0, 0,             \
+    5, 0x25, 1, 1, 1,                            \
+    9, 5, RXEP|0x80, 2, 0x40, 0, 0, 0, 0,        \
+    5, 0x25, 1, 1, 1,                            \
+                                                 \
+    9, 4, 1, 1, 2, 1, 3, 0, (2),                 \
+    7, 0x24, 1, 0, 2, 7, 0,                      \
+    7, 5, TXEP, 2, 0x40, 0, 0,                   \
+    6, 0x25, 2, 2, 1, 2,                         \
+    7, 5, RXEP|0x80, 2, 0x40, 0, 0,              \
+    6, 0x25, 2, 2, 1, 3,                         \
+                                                 \
+    8, 0x0B, 2, 2, 1, 3, 0, 0,                   \
+    9, 4, 2, 0, 0, 1, 1, 0, 0,                   \
+    9, 0x24, 1, 0, 1, 9, 0, 1, 3,                \
+                                                 \
+    9, 4, 3, 0, 2, 1, 3, 0, (4),                 \
+    7, 0x24, 1, 0, 1, ((35)), 0,                 \
+/* This is different from builder, it missed these 28 bytes? */ \
+    9, 5, ETXEP, 2, 0x40, 0, 0, 0, 0,            \
+    5, 0x25, 1, 1, 1,                            \
+    9, 5, ERXEP|0x80, 2, 0x40, 0, 0, 0, 0,       \
+    5, 0x25, 1, 1, 1,                            \
+                                                 \
+    9, 4, 3, 1, 2, 1, 3, 0, (4),                 \
+    7, 0x24, 1, 0, 2, 7, 0,                      \
+    7, 5, ETXEP, 2, 0x40, 0, 0,                  \
+    5, 0x25, 2, 1, 1,                            \
+    7, 5, ERXEP|0x80, 2, 0x40, 0, 0,             \
+    5, 0x25, 2, 1, 1,                            \
+    -1
+
+const uint8_t PROGMEM config1_descriptor[] = {
     // MIDI 1.0
     // 9, 2, 0x65, 0, 2, 1, 0, 0xC0, 50, // 9+9+9+9+7+6+6+9+9+9+5+9+5 = 0x0065
     // 9, 4, 0, 0, 0, 1, 1, 0, 0,
@@ -74,35 +125,27 @@ Thanks to:
     // 9, 5, RXEP | 0x80, 0x02, RXSZ, 0, 1, 0, 0,
     // 5, 0x25, 1, 1, 3,
 
-    // MIDI 2.0+1.0 via altset
-    9, 2, 0x95, 0, 2, 1, 0, 0x80, 0xFA,
-    8, 0x0B, 0, 2, 1, 3, 0, 0,
-    9, 4, 0, 0, 0, 1, 1, 0, 0,
-    9, 0x24, 1, 0, 1, 9, 0, 1, 1,
-    9, 4, 1, 0, 2, 1, 3, 0, 2,
-    7, 0x24, 1, 0, 1, 0x41, 0,
-    6, 0x24, 2, 1, 1, 4,
-    9, 0x24, 3, 2, 1, 1, 1, 1, 4,
-    6, 0x24, 2, 2, 2, 4,
-    9, 0x24, 3, 1, 0x12, 1, 0x12, 1, 4,
-    9, 5, TXEP, 2, 0x40, 0, 0, 0, 0,
-    5, 0x25, 1, 1, 1,
-    9, 5, RXEP | 0x80, 2, 0x40, 0, 0, 0, 0,
-    5, 0x25, 1, 1, 0x12,
-
-    9, 4, 1, 1, 2, 1, 3, 0, 2,  // 9, 4, 1, 1, 2, ... // 9, 4, 1, 0, 2, ...
-    7, 0x24, 1, 0, 2, 7, 0,
-    7, 5, TXEP, 2, 0x40, 0, 0,
-    5, 0x25, 2, 1, 1,
-    7, 5, RXEP | 0x80, 2, 0x40, 0, 0,
-    5, 0x25, 2, 1, 1,
+    // MIDI 2.0+1.0 via altset, two interfaces, for Echo, and for Bridge.
+    9, 2, 231, 0, 4, 1, 0, 0x80, 50,
+    config_descriptor_cont
 };
 
- const uint8_t PROGMEM device_descriptor_qualifier[] = {
-    0x0A, 6, 0, 2, 0xEF, 2, 1, 0x40, 1, 0,
+const uint8_t PROGMEM config2_descriptor[] = {
+    9, 2, 231, 0, 4, 2, 0, 0x80, 50,
+    config_descriptor_cont
 };
- const uint8_t PROGMEM gtb0[] = {
-    5, 0x26, 1, 0x12, 0, 0x0D, 0x26, 2, 1, 0, 0, 1, 4, 0x11, 0, 0, 0, 0,
+
+// Change MIDI_PROTOCOL_2_0 (0x11) to 1_0 (0x01) does nothing.
+const uint8_t PROGMEM gtb0[] = {
+    5, 0x26, 1, 5+13, 0,
+ // 0x0D, 0x26, 2, 1, 0, 0, 1, (5), 0x11, 1, 0, 1, 0, // Is MIDI1: Yes
+    0x0D, 0x26, 2, 1, 0, 0, 1, (5), 0x11, 0, 0, 0, 0,
+    -1
+};
+const uint8_t PROGMEM gtb1[] = {
+    5, 0x26, 1, 5+13, 0,
+    0x0D, 0x26, 2, 1, 0, 0, 1, (6), 0x11, 0, 0, 0, 0,
+    -1
 };
 
 struct usb_string_descriptor_struct {
@@ -110,39 +153,41 @@ struct usb_string_descriptor_struct {
     uint8_t bDescriptorType;
     int16_t wString[];
 };
- const struct usb_string_descriptor_struct PROGMEM string0 = {
-    4, 3, {0x0409}
-};
- const struct usb_string_descriptor_struct PROGMEM string1 = {
-    sizeof(ASCII_MANUFACTURER), 3, ASCII_MANUFACTURER
-};
- const struct usb_string_descriptor_struct PROGMEM string2 = {
-    sizeof(ASCII_PRODUCT),      3, ASCII_PRODUCT
-};
- const struct usb_string_descriptor_struct PROGMEM string3 = {
-    sizeof(ASCII_SERIALNUMBER), 3, ASCII_SERIALNUMBER
-};
- const struct usb_string_descriptor_struct PROGMEM string4 = {
-    sizeof(ASCII_NAME), 3, ASCII_NAME
-};
+const struct usb_string_descriptor_struct PROGMEM string0 = {
+    4, 3, {0x0409, -1} };
+const struct usb_string_descriptor_struct PROGMEM string1 = {
+    sizeof(ASCII1), 3, {ASCII1"\xff"} };
+const struct usb_string_descriptor_struct PROGMEM string2 = {
+    sizeof(ASCII2), 3, {ASCII2"\xff"} };
+const struct usb_string_descriptor_struct PROGMEM string3 = {
+    sizeof(ASCII3), 3, {ASCII3"\xff"} };
+const struct usb_string_descriptor_struct PROGMEM string4 = {
+    sizeof(ASCII4), 3, {ASCII4"\xff"} };
+const struct usb_string_descriptor_struct PROGMEM string5 = {
+    sizeof(ASCII5), 3, {ASCII5"\xff"} };
+const struct usb_string_descriptor_struct PROGMEM string6 = {
+    sizeof(ASCII6), 3, {ASCII6"\xff"} };
 
 // This table defines which descriptor data is sent for each specific
 // request from the host (in wValue and wIndex).
- const struct descriptor_list_struct {
+const struct descriptor_list_struct {
     uint16_t wValue;
     uint16_t wIndex;
     const uint8_t *addr;
-    uint8_t  length;
 } PROGMEM descriptor_list[] = {
-    {0x0100, 0x0000+0, device_descriptor, sizeof(device_descriptor)},
-    {0x0200, 0x0000+0, config1_descriptor, sizeof(config1_descriptor)},
-    {0x0300, 0x0000+0, (const uint8_t *)&string0, 4},
-    {0x0301, 0x0409+0, (const uint8_t *)&string1, sizeof(ASCII_MANUFACTURER)},
-    {0x0302, 0x0409+0, (const uint8_t *)&string2, sizeof(ASCII_PRODUCT)},
-    {0x0303, 0x0409+0, (const uint8_t *)&string3, sizeof(ASCII_SERIALNUMBER)},
-    {0x0304, 0x0409+0, (const uint8_t *)&string4, sizeof(ASCII_NAME)},
-    {0x0600, 0x0000+0, device_descriptor_qualifier, sizeof(device_descriptor_qualifier)},
-    {0x2601, 0x0001+0, gtb0, sizeof(gtb0)},
+    {0x0100, 0x0000+0, device_descriptor},
+    {0x0200, 0x0000+0, config1_descriptor},
+    {0x0201, 0x0000+0, config2_descriptor},
+    {0x0300, 0x0000+0, (const uint8_t *)&string0},
+    {0x0301, 0x0409+0, (const uint8_t *)&string1},
+    {0x0302, 0x0409+0, (const uint8_t *)&string2},
+    {0x0303, 0x0409+0, (const uint8_t *)&string3},
+    {0x0304, 0x0409+0, (const uint8_t *)&string4},
+    {0x0305, 0x0409+0, (const uint8_t *)&string5},
+    {0x0306, 0x0409+0, (const uint8_t *)&string6},
+    {0x0600, 0x0000+0, device_descriptor_qualifier},
+    {0x2601, 0x0001+0, gtb0},
+    {0x2601, 0x0003+0, gtb1},
 };
 #define NUM_DESC_LIST (sizeof(descriptor_list)/sizeof(struct descriptor_list_struct))
 
@@ -160,26 +205,25 @@ uint8_t usb_isconfigured;
 uint8_t transmit_previous_timeout;
 uint8_t altset;
 uint8_t p, q;
+uint8_t to_blink;
 
 // number of bytes available in the receive buffer
-unsigned char usb_rx_available(void)
+uint8_t usb_rx_available(uint8_t ep)
 {
     uint8_t n, intr_state;
-
     n = 0;
-
     intr_state = SREG;
     cli();
     if (usb_isconfigured) {
-        UENUM = TXEP;
+        UENUM = ep; // TXEP;
         n = UEBCLX;
     }
     SREG = intr_state;
-    return (unsigned char)n;
+    return n;
 }
 
 // get the next character, or -1 if nothing received
-char usb_rx_char(void)
+uint8_t usb_rx_char(uint8_t ep)
 {
     uint8_t c, intr_state;
 
@@ -192,7 +236,7 @@ char usb_rx_char(void)
         SREG = intr_state;
         return -1;
     }
-    UENUM = TXEP;
+    UENUM = ep; // TXEP;
     if (!(UEINTX & (1<<RWAL))) {
 // no data in buffer
         SREG = intr_state;
@@ -203,7 +247,7 @@ char usb_rx_char(void)
     // if buffer completely used, release it
     if (!(UEINTX & (1<<RWAL))) UEINTX = 0x6B;
     SREG = intr_state;
-    return (char)c;
+    return c; // It will be 255 when nothing.
 }
 
 // transmit a buffer.
@@ -217,7 +261,7 @@ char usb_rx_char(void)
 // can also be limited by how quickly the PC-based software reads data, as the host
 // controller in the PC will not allocate bandwitdh without a pending read request.
 // (thanks to Victor Suarez for testing and feedback and initial code)
-int8_t usb_tx_buffer(const uint8_t *buffer, uint16_t size)
+int8_t usb_tx_buffer(uint8_t ep, const uint8_t *buffer, uint16_t size)
 {
     uint8_t timeout, intr_state, write_size;
 
@@ -229,7 +273,7 @@ int8_t usb_tx_buffer(const uint8_t *buffer, uint16_t size)
     // even both in the same program!
     intr_state = SREG;
     cli();
-    UENUM = RXEP;
+    UENUM = ep; // RXEP;
     // if we gave up due to timeout before, don't wait again
     if (transmit_previous_timeout) {
         if (!(UEINTX & (1<<RWAL))) {
@@ -259,7 +303,7 @@ int8_t usb_tx_buffer(const uint8_t *buffer, uint16_t size)
             // get ready to try checking again
             intr_state = SREG;
             cli();
-            UENUM = RXEP;
+            UENUM = ep; // RXEP;
         }
 
         // compute how many bytes will fit into the next packet
@@ -356,14 +400,14 @@ int8_t usb_tx_buffer(const uint8_t *buffer, uint16_t size)
 // This doesn't actually transmit the data - that is impossible!
 // USB devices only transmit when the host allows, so the best
 // we can do is release the FIFO buffer for when the host wants it
-void usb_tx_push(void)
+void usb_tx_push(uint8_t ep)
 {
     uint8_t intr_state;
 
     intr_state = SREG;
     cli();
     // if (transmit_flush_timer) {
-        UENUM = RXEP;
+        UENUM = ep; // RXEP;
         UEINTX = 0x3A;
         // transmit_flush_timer = 0;
     // }
@@ -399,21 +443,6 @@ ISR(USB_GEN_vect)
     UEINTX = ~(1<<TXINI);
 }
 
-void blink(uint8_t n)
-{
-    while(n)
-    {
-        sbi (PORTC, 7);
-        for(uint8_t i=0;i<10;i++)
-            _delay_loop_2 ((uint16_t)65535);
-        cbi (PORTC, 7);
-        for(uint8_t i=0;i<10;i++)
-            _delay_loop_2 ((uint16_t)65535);
-        if (n < 255)
-            n--;
-    }
-}
-
 // USB Endpoint Interrupt - endpoint 0 is handled here.  The
 // other endpoints are manipulated by the user-callable
 // functions, and the start-of-frame interrupt.
@@ -422,8 +451,7 @@ ISR(USB_COM_vect)
     uint8_t intbits;
     const uint8_t *list;
     const uint8_t *cfg;
-    uint8_t i, n, len, en;
-    // uint8_t *p;
+    uint8_t i, len, en;
     uint8_t bmRequestType;
     uint8_t bRequest;
     uint16_t wValue;
@@ -431,7 +459,7 @@ ISR(USB_COM_vect)
     uint16_t wLength;
     uint16_t desc_val;
     const uint8_t *desc_addr;
-    uint8_t desc_length;
+    // uint8_t desc_length;
 
     UENUM = 0;
     intbits = UEINTX;
@@ -466,27 +494,34 @@ ISR(USB_COM_vect)
                 }
                 list += 2;
                 desc_addr = (const uint8_t *)pgm_read_word(list);
-                list += 2;
-                desc_length = pgm_read_byte(list);
                 break;
             }
-            len = (wLength < 256) ? wLength : 255;
-            if (len > desc_length) len = desc_length;
-            do {
+            // For descriptor length > 256. EOL is 0xFF and should not occur elsewhere.
+            // Happily, speed is non critical here.
+            uint8_t b;
+            uint16_t q = 0;
+            goto middle;
+            do
+            {
                 // wait for host ready for IN packet
-                do {
-                    i = UEINTX;
-                } while (!(i & ((1<<TXINI)|(1<<RXOUTI))));
-                if (i & (1<<RXOUTI))
-                    return;    // abort
-                // send IN packet
-                n = len < EP0SZ ? len : EP0SZ;
-                for (i = n; i; i--) {
-                    UEDATX = pgm_read_byte(desc_addr++);
+                if ((q & (EP0SZ - 1)) == 0)
+                {
+                    do {
+                        i = UEINTX;
+                    } while (!(i & ((1<<TXINI)|(1<<RXOUTI))));
+                    if (i & (1<<RXOUTI))
+                        return;    // abort
                 }
-                len -= n;
+                // send IN packet
+                UEDATX = b;
+                q++;
+                if ((q & (EP0SZ - 1)) == 0)
+                    usb_send_in();
+middle:
+                b = pgm_read_byte(desc_addr++);
+            } while ((b != 0xFF) && (q < wLength));
+            if ((q & (EP0SZ - 1)) > 0)
                 usb_send_in();
-            } while (len || n == EP0SZ);
             return;
         }
         if (bRequest == 5) { // SET_ADDRESS
@@ -498,7 +533,6 @@ ISR(USB_COM_vect)
         if (bRequest == 11) { // REQ_SET_INTERFACE
             usb_send_in();
             altset = wValue & (uint16_t)1;
-            // PC = 0;
             p = 6;
             q = 0;
             return;
@@ -506,9 +540,23 @@ ISR(USB_COM_vect)
         if (bRequest == 9 && bmRequestType == 0) { // SET_CONFIGURATION
             usb_send_in();
             usb_isconfigured = wValue;
+            to_blink += wValue * 2;
+            if (wValue == 0)
+                UCSR1B = 0;
+            else
+            {
+                UCSR1A = (1 << UDRE1) ;                 // U2X1 = 0
+                if (wValue == 1)
+                    UBRR1 = (F_CPU / 16 / 31250) - 1;   // Exact speed
+                else
+                    UBRR1 = (F_CPU / 16 / 38400) - 1;   // 1% speed error is "ok"
+                UCSR1B = (1 << RXEN1) | (1 << TXEN1);   // No interrupts
+                UCSR1C = (3 << UCSZ10);                 // 8-N-1
+            }
+
             // transmit_flush_timer = 0;
             cfg = endpoint_config_table;
-            for (i=1; i<3; i++) {
+            for (i=1; i<5; i++) {
                 UENUM = i;
                 en = pgm_read_byte(cfg++);
                 UECONX = en;
@@ -547,7 +595,7 @@ ISR(USB_COM_vect)
         if ((bRequest == 1 || bRequest == 3) // CLEAR_FEATURE || SET_FEATURE
           && bmRequestType == 0x02 && wValue == 0) {
             i = wIndex & 0x7F;
-            if (i >= 1 && i <= 2) { // MAX_ENDPOINT
+            if (i >= 1 && i <= 4) { // MAX_ENDPOINT
                 usb_send_in();
                 UENUM = i;
                 if (bRequest == 3) {
@@ -566,16 +614,30 @@ ISR(USB_COM_vect)
 }
 
 
+ISR(TIMER1_OVF_vect)
+{
+    // I need to save flags like C, Z, N... but how to do it in C?
+    uint8_t intr_state;
+    intr_state = SREG;
+    cli();
+
+    if (to_blink > 0)
+    {
+        if (to_blink & 1)
+            cbi (PORTC, 7);
+        else
+            sbi (PORTC, 7);
+
+        to_blink--;
+    }
+
+    SREG = intr_state;
+}
+
+
 int main(void)
 {
-    sbi(DDRC, 7);  // CJMCU LED, pin 32 PC7
-
-    sbi(DDRB,  6);  // CJMCU "D10": out 0 (gnd)
-    cbi(PORTB, 6);  // CJMCU "D10": out 0 (gnd)
-    cbi(DDRB,  5);  // CJMCU "D9": in + pullup
-    sbi(PORTB, 5);  // CJMCU "D9": in + pullup
-    cbi(DDRB,  7);  // CJMCU "D11": in + pullup
-    sbi(PORTB, 7);  // CJMCU "D11": in + pullup
+    sbi(DDRC, 7);  // Beetle LED, pin 32 PC7
 
     usb_isconfigured = 0;
     transmit_previous_timeout = 0;
@@ -584,6 +646,7 @@ int main(void)
     altset = 0;
     p = 6;
     q = 0;
+    to_blink = 0;
 
     uint16_t n = 0;
 
@@ -604,62 +667,39 @@ int main(void)
         _delay_loop_2 ((uint16_t)65535);
     };
 
-    uint8_t jumper = PINB & 0b10100000;
+    TCCR1A = 0;
+    TCCR1B = (1<<CS11)|(1<<CS10);    // Divide by 64 is ~4 Hz
+    TIFR1 = 0;
+    TIMSK1 = (1<<TOIE1);
 
-    if (jumper == 0b10100000) { // No jumper
-        blink(1);
-
-        // MIDI 1.0/2.0 Echo.
+    while(1)
+    {
+        // Phase 1. MIDI 1.0/2.0 Echo.
         // Message length is 4/8 bytes max, except Sysex which are unlimited length.
         // https://polyphonicexpression.com/midi-1-how-it-works
         // https://midi.org/summary-of-midi-1-0-messages
         // I try to support long messages here.
         // Looks like here we do not need to differ MIDI 1.0 from 2.0.
-        while(1)
+        while(usb_rx_available(ETXEP))
         {
-            if (usb_rx_available() == 0)
-                continue;
             sbi(PORTC, 7);
-            goto skip;
+            uint8_t nn = 0;
 
-            while(usb_rx_available())
-            {
-skip:
-                // ringbuf used here as ordinary buf.
-                // TODO Here we may not need any byffering,
-                // try to just pass incoming USB to outgoing immegiately
-                // (64-byte pieces).
-                ringbuf[n++] = usb_rx_char();
-                if (n == 256)
-                    break;
-            }
-            usb_tx_buffer (ringbuf, n);
-            usb_tx_push();
-            n = 0;
+            // ringbuf used here as ordinary buf.
+            // TODO Here we may not need any byffering,
+            // try to just pass incoming USB to outgoing immegiately
+            // (64-byte pieces).
+            do
+                ringbuf[nn++] = usb_rx_char(ETXEP);
+            while (usb_rx_available(ETXEP) && (nn > 0)); // Up to 256
+
+            usb_tx_buffer(ERXEP, ringbuf, (nn == 0) ? 256 : nn);
+            usb_tx_push(ERXEP);
+            // nn = 0; // Not need, auto rollover.
             cbi(PORTC, 7);
         }
-    }
 
-    // Here is jumper present, so we need USART.
-    // Speed is selectable: for MIDI, or for serial terminal debug.
-    UCSR1A = (1 << UDRE1) ;                 // U2X1 = 0
-    if (jumper == 0b00100000)
-    {                                       // Jumper "D10"-"D11"
-        blink(2);
-        UBRR1 = (F_CPU / 16 / 31250) - 1;   // Exact speed
-    }
-    else
-    {                                       // Jumper "D10"-"D9"
-        blink(3);
-        UBRR1 = (F_CPU / 16 / 38400) - 1;   // 1% speed error is "ok"
-    }
-    UCSR1B = (1 << RXEN1) | (1 << TXEN1);   // No interrupts
-    UCSR1C = (3 << UCSZ10);                 // 8-N-1
-
-    // MIDI to USB, and vice versa (duplex).
-    while(1)
-    {
-        // Unlike of Echo mode, for Bridge, we differ MIDI 1.0 from 2.0.
+        // Unlike of Echo mode, for Bridge we differ MIDI 1.0 from 2.0.
         // Check if we are asked to switch alternate setting from host OS/driver.
         // This can be happened at any time.
 
@@ -675,34 +715,34 @@ skip:
         // adequate: just use MIDI 1.0 mode we have as altset (again,
         // as per midi.org).
         {
-            // Phase 1. Read MIDI IN serial bytes, if any;
+            // Phase 2. Read MIDI IN serial bytes, if any;
             //          create USB packet, and send it.
             if(UCSR1A & (1<<RXC1)) {
-                // TODO add timeout for LED off, if MIDI RX terminated in middle.
+                // TODO add timeout for LED off, if MIDI RX terminated in middle?
                 sbi(PORTC, 7);
                 buf[q++] = UDR1;
                 if (q == 8)
                 {
                     q = 0;
-                    usb_tx_buffer (buf, 8);
-                    usb_tx_push();
+                    usb_tx_buffer(RXEP, buf, 8);
+                    usb_tx_push(RXEP);
                     cbi(PORTC, 7);
                 }
             }
 
-            // Phase 2. Check if USB packet received, get bytes and emit on MIDI OUT.
-            while(usb_rx_available())
+            // Phase 3. Check if USB packet received, get bytes and emit on MIDI OUT.
+            while(usb_rx_available(TXEP))
             {
                 sbi(PORTC, 7); // TODO Make it to fire only once, as at Echo.
 
-                ringbuf[uwptr++] = usb_rx_char();
-                ringbuf[uwptr++] = usb_rx_char();
-                ringbuf[uwptr++] = usb_rx_char();
-                ringbuf[uwptr++] = usb_rx_char();
-                ringbuf[uwptr++] = usb_rx_char();
-                ringbuf[uwptr++] = usb_rx_char();
-                ringbuf[uwptr++] = usb_rx_char();
-                ringbuf[uwptr++] = usb_rx_char();
+                ringbuf[uwptr++] = usb_rx_char(TXEP);
+                ringbuf[uwptr++] = usb_rx_char(TXEP);
+                ringbuf[uwptr++] = usb_rx_char(TXEP);
+                ringbuf[uwptr++] = usb_rx_char(TXEP);
+                ringbuf[uwptr++] = usb_rx_char(TXEP);
+                ringbuf[uwptr++] = usb_rx_char(TXEP);
+                ringbuf[uwptr++] = usb_rx_char(TXEP);
+                ringbuf[uwptr++] = usb_rx_char(TXEP);
             }
 
             if( (UCSR1A & (1<<UDRE1)) && uwptr!=irptr ) {
@@ -722,7 +762,7 @@ skip:
         }
         else
         { // MIDI 1.0
-            // Phase 1. Read MIDI IN serial bytes, if any;
+            // Phase 2. Read MIDI IN serial bytes, if any;
             //          create USB packet, and send it.
             if(UCSR1A & (1<<RXC1)) {
                 // TODO add timeout for LED off, if MIDI RX terminated in middle.
@@ -812,7 +852,7 @@ skip:
                         {
                             buf[3] = RxByte;
                             p = 5;
-                            usb_tx_buffer (buf, 4);
+                            usb_tx_buffer (RXEP, buf, 4);
                             n++;        // Q'ty of 4-byte chunks
                             if (n >= 7) // Like similar to Axiom 25 for simpler debug.
                             {
@@ -858,18 +898,18 @@ utxrdy3:
 utxrdy4:
                 buf[3] = RxByte;
 utxrdy4a:
-                usb_tx_buffer (buf, 4);
+                usb_tx_buffer (RXEP, buf, 4);
 utxrdy5:
-                usb_tx_push();
+                usb_tx_push(RXEP);
 stop:
                 cbi(PORTC, 7);
 notyet:
             }
 
-            // Phase 2. Check if USB packet received, get bytes and emit on MIDI OUT.
-            while(usb_rx_available())
+            // Phase 3. Check if USB packet received, get bytes and emit on MIDI OUT.
+            while(usb_rx_available(TXEP))
             {
-                sbi(PORTC, 7); // TODO Make it to fire only once, as at Echo.
+                sbi(PORTC, 7); // TODO Make it to fire only once ?
 
                 // https://www.usb.org/sites/default/files/midi10.pdf
                 // USB packets are not just copy of MIDI cable bytes, they are
@@ -877,34 +917,34 @@ notyet:
                 // Header byte defines quantity of MIDI bytes from constant
                 // length packet, and this definition is not direct, but with
                 // lookup table.
-                uint8_t byte0 = usb_rx_char();
+                uint8_t byte0 = usb_rx_char(TXEP);
 
                 // Should be fast enough, but need to use table and IJMP later.
                 if (byte0 < 2) // Reserved, throw away.
                 {
-                    usb_rx_char();
-                    usb_rx_char();
-                    usb_rx_char();
+                    usb_rx_char(TXEP);
+                    usb_rx_char(TXEP);
+                    usb_rx_char(TXEP);
                     // cbi(PORTC, 7);
                 }
                 else if ((byte0 == 5) || (byte0 == 15))
                 {
-                    ringbuf[uwptr++] = usb_rx_char();
-//                        uwptr &= TX_MASK; // We have exactly one byte size pointers.
-                    usb_rx_char();
-                    usb_rx_char();
+                    ringbuf[uwptr++] = usb_rx_char(TXEP);
+                    // uwptr &= TX_MASK; // We have exactly one byte size pointers.
+                    usb_rx_char(TXEP);
+                    usb_rx_char(TXEP);
                 }
                 else if ((byte0 == 2) || (byte0 == 6) || (byte0 == 12) || (byte0 == 13))
                 {
-                    ringbuf[uwptr++] = usb_rx_char();
-                    ringbuf[uwptr++] = usb_rx_char();
-                    usb_rx_char();
+                    ringbuf[uwptr++] = usb_rx_char(TXEP);
+                    ringbuf[uwptr++] = usb_rx_char(TXEP);
+                    usb_rx_char(TXEP);
                 }
                 else
                 {
-                    ringbuf[uwptr++] = usb_rx_char();
-                    ringbuf[uwptr++] = usb_rx_char();
-                    ringbuf[uwptr++] = usb_rx_char();
+                    ringbuf[uwptr++] = usb_rx_char(TXEP);
+                    ringbuf[uwptr++] = usb_rx_char(TXEP);
+                    ringbuf[uwptr++] = usb_rx_char(TXEP);
                 }
             }
 
