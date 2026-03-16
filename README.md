@@ -22,7 +22,7 @@ Toolchain
 ---------
 
     # For Archlinux:
-    pacman -S avr-gcc avr-libc avrdude usb_modeswitch
+    pacman -S avr-gcc avr-libc avrdude
     # Should print:
     # This assembler was configured for a target of `avr'.
     $(avr-gcc -print-prog-name=as) --version
@@ -66,7 +66,16 @@ Speed switch
 
 Default serial (MIDI) speed is **31250 bps** (_one_ bright blink). To change it to **38400 bps**:
 
-    usb_modeswitch -v 16c0 -p 27de -u 2
+1. _Deprecated_, as it too heavy, and gives fat firmware; please check `usbmidi_modesw.c` if you need it:
+
+    ```usb_modeswitch -v 16c0 -p 27de -u 2```
+   
+
+2. _New_, but requires extra simple tool. I provide it. No need to know VID:PID (and there can be more than one bridge present with same VID:PID), it take serial number instead. Tool also can be useful for regular USB-Serials:
+
+    ```gcc -lusb-1.0 -o setspeed setspeed.c```
+   
+    ```./setspeed 18126755 38400```
 
 and it will be _two_ blinks.
 
