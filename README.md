@@ -129,6 +129,10 @@ What is even more unexpected, for _MIDI 2.0_ i see _worst case_ RTT like an **or
 
 TODO.
 
+> [Does using JACK add latency?](https://jackaudio.org/faq/no_extra_latency.html)
+> 
+> There is **NO** extra latency caused by using JACK for audio input and output. 
+
 Known Bugs
 ==========
 
